@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Kopi Senja</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="flex h-screen">
+        <aside class="w-64 bg-stone-900 text-white p-6 hidden md:block">
+            <h2 class="text-2xl font-bold text-orange-400 mb-10 italic">KOPI<span class="text-white font-normal">SENJA.</span></h2>
+            <nav class="space-y-4">
+                <a href="#" class="block py-2.5 px-4 rounded bg-orange-600 transition font-bold text-sm">
+                    <i class="fas fa-home mr-2"></i> Dashboard
+                </a>
+                <a href="#" class="block py-2.5 px-4 rounded hover:bg-stone-800 transition text-sm">
+                    <i class="fas fa-history mr-2"></i> Riwayat Pesanan
+                </a>
+                <a href="#" class="block py-2.5 px-4 rounded hover:bg-stone-800 transition text-sm">
+                    <i class="fas fa-box mr-2"></i> Stok Menu
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-8">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-black text-stone-800 tracking-tight">Manajemen Pesanan</h1>
+                    <p class="text-sm text-gray-500">Pantau pesanan real-time dari pelanggan.</p>
+                </div>
+                <div id="status-koneksi" class="bg-green-100 text-green-700 px-4 py-1 rounded-full text-xs font-bold animate-pulse">
+                    ● Sistem Aktif
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-orange-500">
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Menunggu</p>
+                    <h3 id="stat-pending" class="text-3xl font-black text-stone-900">0</h3>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-blue-500">
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Proses</p>
+                    <h3 id="stat-process" class="text-3xl font-black text-stone-900">0</h3>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-green-500">
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Selesai</p>
+                    <h3 id="stat-done" class="text-3xl font-black text-stone-900">0</h3>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-yellow-500">
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Omzet (Selesai)</p>
+                    <h3 id="stat-revenue" class="text-2xl font-black text-stone-900 text-orange-600">Rp 0</h3>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+                <table class="w-full text-left">
+                    <thead class="bg-stone-50 border-b border-gray-100">
+                        <tr class="text-[11px] font-black text-gray-400 uppercase tracking-wider">
+                            <th class="p-5">ID / Meja</th>
+                            <th class="p-5">Detail Pesanan</th>
+                            <th class="p-5">Total</th>
+                            <th class="p-5 text-center">Bayar</th>
+                            <th class="p-5 text-center">Status</th>
+                            <th class="p-5 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-order-list" class="divide-y divide-gray-100">
+                        </tbody>
+                </table>
+                <div id="empty-state" class="hidden p-20 text-center text-gray-300 italic">
+                    Belum ada antrean pesanan saat ini.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // KUNCI UTAMA: Nama storage harus sama dengan program cafe kamu ('pos_orders')
+        let orders = JSON.parse(localStorage.getItem('pos_orders')) || [];
+
+        function initAdmin() {
+            renderOrders();
+            updateStats();
+        }
+
+        function renderOrders() {
+            const list = document.getElementById('admin-order-list');
+            const empty = document.getElementById('empty-state');
+            list.innerHTML = '';
+
+            if (orders.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                orders.forEach((order, index) => {
+                    const statusClass = 
+                        order.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 
+                        order.status === 'Proses' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700';
+                    
+                    const payClass = order.method === 'QRIS' ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50';
+
+                    list.innerHTML += `
+                        <tr class="hover:bg-gray-50 transition text-sm">
+                            <td class="p-5 font-mono font-bold text-gray-400">
+                                #${order.id}<br>
+                                <span class="text-stone-900 text-xs font-black">MEJA ${order.table}</span>
+                            </td>
+                            <td class="p-5 font-medium text-gray-600">
+                                ${order.items.map(i => `${i.name} (${i.qty})`).join(', ')}
+                            </td>
+                            <td class="p-5 font-black text-stone-900 italic">
+                                Rp ${order.total.toLocaleString('id-ID')}
+                            </td>
+                            <td class="p-5 text-center">
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${payClass}">
+                                    ${order.method}
+                                </span>
+                            </td>
+                            <td class="p-5 text-center">
+                                <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase ${statusClass}">
+                                    ${order.status}
+                                </span>
+                            </td>
+                            <td class="p-5 text-right flex justify-end gap-2">
+                                ${order.status === 'Pending' ? `
+                                    <button onclick="updateStatus(${index}, 'Proses')" class="bg-stone-900 text-white px-4 py-2 rounded-xl text-[10px] font-bold hover:bg-orange-600 transition shadow-lg">PROSES</button>
+                                ` : ''}
+                                ${order.status === 'Proses' ? `
+                                    <button onclick="updateStatus(${index}, 'Selesai')" class="bg-green-600 text-white px-4 py-2 rounded-xl text-[10px] font-bold hover:bg-green-700 transition shadow-lg text-center">SELESAI</button>
+                                ` : ''}
+                                ${order.status === 'Selesai' ? `<span class="text-gray-300 italic text-xs">Arsip</span>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function updateStatus(index, newStatus) {
+            orders[index].status = newStatus;
+            localStorage.setItem('pos_orders', JSON.stringify(orders));
+            renderOrders();
+            updateStats();
+        }
+
+        function updateStats() {
+            const pending = orders.filter(o => o.status === 'Pending').length;
+            const process = orders.filter(o => o.status === 'Proses').length;
+            const done = orders.filter(o => o.status === 'Selesai').length;
+            const revenue = orders.filter(o => o.status === 'Selesai').reduce((a, b) => a + b.total, 0);
+
+            document.getElementById('stat-pending').innerText = pending;
+            document.getElementById('stat-process').innerText = process;
+            document.getElementById('stat-done').innerText = done;
+            document.getElementById('stat-revenue').innerText = `Rp ${revenue.toLocaleString('id-ID')}`;
+        }
+
+        // Live Sync
+        window.addEventListener('storage', () => {
+            orders = JSON.parse(localStorage.getItem('pos_orders')) || [];
+            renderOrders();
+            updateStats();
+        });
+
+        initAdmin();
+    </script>
+</body>
+</html>
